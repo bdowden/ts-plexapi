@@ -134,3 +134,9 @@ export interface Device {
   };
   Connection?: Array<{ $: { uri: string } }>;
 }
+
+export interface PlexUser {
+  $: {
+    
+  }
+}

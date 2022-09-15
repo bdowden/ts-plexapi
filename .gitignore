@@ -48,3 +48,5 @@ media/transcode
 
 # temporary ignore
 examples
+
+**test.ts

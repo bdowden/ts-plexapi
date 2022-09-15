@@ -6,9 +6,12 @@ import { parseStringPromise } from 'xml2js';
 
 import { PlexObject } from './base/plexObject.js';
 import { BASE_HEADERS, TIMEOUT } from './config.js';
-import { Connection, Device, ResourcesResponse, UserResponse } from './myplex.types.js';
+import { Connection, Device, PlexUser, ResourcesResponse, UserResponse } from './myplex.types.js';
 import { PlexServer } from './server.js';
 import { MediaContainer } from './util.js';
+import { Section } from './library.js';
+import { HistoryMetadatum } from './server.types.js';
+import { NotFound } from './exceptions.js';
 
 /**
  * MyPlex account and profile information. This object represents the data found Account on
@@ -20,10 +23,10 @@ import { MediaContainer } from './util.js';
 export class MyPlexAccount {
   static key = 'https://plex.tv/api/v2/user';
 
-  FRIENDINVITE = 'https://plex.tv/api/servers/{machineId}/shared_servers'; // post with data
+  FRIENDINVITE = (machineId: string) => `https://plex.tv/api/servers/${machineId}/shared_servers`; // post with data
   HOMEUSERCREATE = 'https://plex.tv/api/home/users?title={title}'; // post with data
   EXISTINGUSER = 'https://plex.tv/api/home/users?invitedEmail={username}'; // post with data
-  FRIENDSERVERS = 'https://plex.tv/api/servers/{machineId}/shared_servers/{serverId}'; // put with data
+  static FRIENDSERVERS = (machineId: string, serverId: number) => `https://plex.tv/api/servers/${machineId}/shared_servers/${serverId}`; // put with data
   PLEXSERVERS = 'https://plex.tv/api/servers/{machineId}'; // get
   FRIENDUPDATE = 'https://plex.tv/api/friends/{userId}'; // put with args, delete
   REMOVEHOMEUSER = 'https://plex.tv/api/home/users/{userId}'; // delete
@@ -175,6 +178,88 @@ export class MyPlexAccount {
     return response.MediaContainer.Device.map(data => new MyPlexDevice(this.server, data));
   }
 
+  async user(username: string): Promise<MyPlexUser | undefined> {
+    const users = await this.users();
+
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+    if (user == undefined) {
+      throw new NotFound(`Unable to find user ${username}`);
+    }
+
+    return user;
+  }
+
+  async users(): Promise<MyPlexUser[]> {
+    const response = await this.query<MediaContainer<{ User: PlexUser[] }>>(MyPlexUser.key);
+
+    return response.MediaContainer.User.map(data => new MyPlexUser(this.server, data));
+  }
+
+  /*
+  def section(self, name):
+        """ Returns the :class:`~plexapi.myplex.Section` that matches the name specified.
+            Parameters:
+                name (str): Name of the section to return.
+        """
+        for section in self.sections():
+            if name.lower() == section.title.lower():
+                return section
+
+        raise NotFound(f'Unable to find section {name}')
+
+    def sections(self):
+        """ Returns a list of all :class:`~plexapi.myplex.Section` objects shared with this user.
+        """
+        url = MyPlexAccount.FRIENDSERVERS.format(machineId=self.machineIdentifier, serverId=self.id)
+        data = self._server.query(url)
+        return self.findItems(data, Section, rtag='SharedServer')
+
+        */
+
+ /**
+  * inviteFriend
+  */
+  async inviteFriend(
+    user: string,
+    server: PlexServer | string,
+    sections: Section[] | string[],
+    allowSync: boolean = false,
+    allowCameraUpload: boolean = false,
+    allowChannels: boolean = false,
+    filterMovies: any = null,
+    filterTelevision: any = null,
+    filterMusic: any = null
+  ) {
+/*
+username = user.username if isinstance(user, MyPlexUser) else user
+        machineId = server.machineIdentifier if isinstance(server, PlexServer) else server
+        sectionIds = self._getSectionIds(machineId, sections)
+        params = {
+            'server_id': machineId,
+            'shared_server': {'library_section_ids': sectionIds, 'invited_email': username},
+            'sharing_settings': {
+                'allowSync': ('1' if allowSync else '0'),
+                'allowCameraUpload': ('1' if allowCameraUpload else '0'),
+                'allowChannels': ('1' if allowChannels else '0'),
+                'filterMovies': self._filterDictToStr(filterMovies or {}),
+                'filterTelevision': self._filterDictToStr(filterTelevision or {}),
+                'filterMusic': self._filterDictToStr(filterMusic or {}),
+            },
+        }
+        headers = {'Content-Type': 'application/json'}
+        url = self.FRIENDINVITE.format(machineId=machineId)
+        return self.query(url, self._session.post, json=params, headers=headers)
+        */
+
+    const requestHeaders = this._headers();
+    const username = user // TODO: This should change to accept a MyPlexUser once that is involved
+    const machineId = (server instanceof PlexServer) ? server.machineIdentifier : server;
+    
+    const url = this.FRIENDINVITE(machineId);
+    //this.query(url, "post", requestHeaders,)
+  }
+
   /**
    * Main method used to handle HTTPS requests to the Plex client. This method helps
    * by encoding the response to utf-8 and parsing the returned XML into and
@@ -192,6 +277,7 @@ export class MyPlexAccount {
     timeout?: number,
     username?: string,
     password?: string,
+    jsonData?: any
   ): Promise<T> {
     const requestHeaders = this._headers();
     if (username && password) {
@@ -462,6 +548,98 @@ export class ResourceConnection {
     this.uri = data.uri;
     this.local = data.local;
     this.httpuri = `http://${data.address}:${data.port}`;
+  }
+}
+
+export class MyPlexUser extends PlexObject {
+  static override TAG = 'User';
+  static key = 'https://plex.tv/api/users';
+
+  allowCameraUpload!: boolean;
+  allowChannels!: boolean;
+  allowSync!: boolean;
+  email!: string;
+  filterAll!: string;
+  filterMovies!: string;
+  filterMusic!: string;
+  filterPhotos!: string;
+  filterTelevision!: string;
+  home!: boolean;
+  id!: number;
+  protected!: boolean;
+  recommendationsPlaylistId!: string;
+  restricted!: string;
+  thumb!: string;
+  title!: string;
+  username!: string;
+  servers!: MyPlexServerShare[];  
+
+  constructor(server: PlexServer, data: any, initPath?: string, parent?: PlexObject) {
+    super(server, data, initPath, parent);
+
+  }
+
+  protected _loadData(data: any): void {
+  }
+
+  async history(maxResults: number = 9999999, minDate: Date = null): Promise<HistoryMetadatum[]> {
+    let elements = (await Promise.all(
+      this.servers.map(async s => (await s.history(maxResults, minDate)))
+    )).flat();
+
+    return elements;
+  }
+}
+
+export class MyPlexServerShare extends PlexObject {
+  static override TAG = 'Server';
+
+  id!: number;
+  accountId!: number;
+  serverId!: number;
+  machineIdentifier!: string;
+  name!: string;
+  lastSeenAt!: Date;
+  numLibraries!: number;
+  allLibraries!: boolean;
+  owned!: boolean;
+  pending!: boolean;
+
+  protected override _loadData(data: any): void {
+    this.key = data.key;
+    this.id = data.id;
+    this.accountId = data.accountId;
+    this.serverId = data.serverId;
+    this.machineIdentifier = data.machineIdentifier;
+    this.name = data.name;
+    this.lastSeenAt = data.lastSeenAt;
+    this.numLibraries = data.numLibraries;
+    this.allLibraries = data.allLibraries;
+    this.owned = data.owned;
+    this.pending = data.pending;
+  }
+
+  async section(name: string): Promise<Section> {
+    let sections = await this.sections();
+
+    let section = sections.find(s => s.title.toLowerCase() === name.toLowerCase());
+
+    if (section) {
+      return section;
+    }
+
+    throw new NotFound(`Unable to find section ${name}`);
+  }
+
+  async sections(): Promise<Section[]> {
+    let url = MyPlexAccount.FRIENDSERVERS(this.machineIdentifier, this.id);
+    return await this.server.query<Section[]>(url);
+  }
+
+  async history(maxResults: number = 9999999, minDate?: Date): Promise<HistoryMetadatum[]> {
+    let server = this.server;
+    await server.connect();
+    return await server.history(maxResults, minDate);
   }
 }
 
