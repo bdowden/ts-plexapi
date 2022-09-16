@@ -3,14 +3,17 @@
   "compilerOptions": {
     "outDir": "dist",
     "lib": ["ES2021"],
-		"target": "ES2021", // Node.js 16
+		"target": "ES2021", // Node.js 16,
     "strictNullChecks": false,
     "noUnusedParameters": false,
 		"useDefineForClassFields": false,
     "noPropertyAccessFromIndexSignature": false,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "sourceMap": true
   },
   "ts-node": {
-    "transpileOnly": true
+    "transpileOnly": true,
+    "esm": true
   }
 }

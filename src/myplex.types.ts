@@ -137,6 +137,23 @@ export interface Device {
 
 export interface PlexUser {
   $: {
+    allowCameraUpload: boolean;
+    allowChannels: boolean;
+    allowSync: boolean;
+    email: string;
+    filterAll: string;
+    filterMovies: string;
+    filterMusic: string;
+    filterPhotos: string;
+    filterTelevision: string;
+    home: boolean;
+    id: number;
+    protected: boolean;
+    recommendationsPlaylistId: string;
+    restricted: string;
+    thumb: string;
+    title: string;
+    username: string;
     
   }
 }

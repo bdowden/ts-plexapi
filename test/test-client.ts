@@ -11,7 +11,7 @@ if (!username && !password && !token) {
 
 export async function createAccount(): Promise<MyPlexAccount> {
   const account = await new MyPlexAccount(
-    'http://localhost:32400',
+    'https://plex.dowdentech.com',
     username,
     password,
     token,

@@ -21,7 +21,7 @@ import { NotFound } from './exceptions.js';
  * and return this object.
  */
 export class MyPlexAccount {
-  static key = 'https://plex.tv/api/v2/user';
+  static key = 'https://plex.tv/api/user';
 
   FRIENDINVITE = (machineId: string) => `https://plex.tv/api/servers/${machineId}/shared_servers`; // post with data
   HOMEUSERCREATE = 'https://plex.tv/api/home/users?title={title}'; // post with data
@@ -191,7 +191,7 @@ export class MyPlexAccount {
   }
 
   async users(): Promise<MyPlexUser[]> {
-    const response = await this.query<MediaContainer<{ User: PlexUser[] }>>(MyPlexUser.key);
+    const response = await this.queryXml<MediaContainer<{ User: PlexUser[] }>>(MyPlexUser.key);
 
     return response.MediaContainer.User.map(data => new MyPlexUser(this.server, data));
   }
@@ -252,12 +252,23 @@ username = user.username if isinstance(user, MyPlexUser) else user
         return self.query(url, self._session.post, json=params, headers=headers)
         */
 
-    const requestHeaders = this._headers();
-    const username = user // TODO: This should change to accept a MyPlexUser once that is involved
-    const machineId = (server instanceof PlexServer) ? server.machineIdentifier : server;
+    // const username = user // TODO: This should change to accept a MyPlexUser once that is involved
+    // const machineId = (server instanceof PlexServer) ? server.machineIdentifier : server;
     
-    const url = this.FRIENDINVITE(machineId);
+    // const url = this.FRIENDINVITE(machineId);
     //this.query(url, "post", requestHeaders,)
+  }
+
+  async queryXml<T = any>(
+    url: string,
+    method: 'get' | 'post' | 'put' | 'patch' | 'head' | 'delete' = 'get',
+    headers?: any,
+    timeout?: number,
+    username?: string,
+    password?: string,
+    jsonData?: any
+  ): Promise<T> {
+    return await this.query(url, method, headers, timeout, username, password, jsonData);
   }
 
   /**
@@ -300,6 +311,11 @@ username = user.username if isinstance(user, MyPlexUser) else user
       const xml = await parseStringPromise(res.body);
       return xml;
     }
+
+    
+    const result = (await promise);
+
+    console.log(result.body);
 
     const res = await promise.json<T>();
     return res;
@@ -574,12 +590,25 @@ export class MyPlexUser extends PlexObject {
   username!: string;
   servers!: MyPlexServerShare[];  
 
-  constructor(server: PlexServer, data: any, initPath?: string, parent?: PlexObject) {
-    super(server, data, initPath, parent);
-
-  }
-
-  protected _loadData(data: any): void {
+  protected override _loadData(data: PlexUser): void {
+    this.allowCameraUpload = data.$.allowCameraUpload;
+    this.allowChannels = data.$.allowChannels;
+    this.allowSync = data.$.allowSync;
+    this.email = data.$.email;
+    this.filterAll = data.$.filterAll;
+    this.filterMovies = data.$.filterMovies;
+    this.filterMusic = data.$.filterMusic;
+    this.filterPhotos = data.$.filterPhotos;
+    this.filterTelevision = data.$.filterTelevision;
+    this.home = data.$.home;
+    this.id = data.$.id;
+    this.protected = data.$.protected;
+    this.recommendationsPlaylistId = data.$.recommendationsPlaylistId;
+    this.restricted = data.$.restricted;
+    this.thumb = data.$.thumb;
+    this.title = data.$.title;
+    this.username = data.$.username;
+    
   }
 
   async history(maxResults: number = 9999999, minDate: Date = null): Promise<HistoryMetadatum[]> {
