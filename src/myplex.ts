@@ -268,7 +268,7 @@ username = user.username if isinstance(user, MyPlexUser) else user
     password?: string,
     jsonData?: any
   ): Promise<T> {
-    return await this.query(url, method, headers, timeout, username, password, jsonData);
+    return await this.query(url, method, headers, timeout, username, password, jsonData, true);
   }
 
   /**
@@ -288,7 +288,8 @@ username = user.username if isinstance(user, MyPlexUser) else user
     timeout?: number,
     username?: string,
     password?: string,
-    jsonData?: any
+    jsonData?: any,
+    isXml?: boolean
   ): Promise<T> {
     const requestHeaders = this._headers();
     if (username && password) {
@@ -306,16 +307,16 @@ username = user.username if isinstance(user, MyPlexUser) else user
       retry: { limit: 0 },
     });
 
-    if (url.includes('xml')) {
+    if (url.includes('xml') || isXml) {
       const res = await promise;
       const xml = await parseStringPromise(res.body);
       return xml;
     }
 
-    
+    /*
     const result = (await promise);
 
-    console.log(result.body);
+    console.log(result.body);*/
 
     const res = await promise.json<T>();
     return res;
