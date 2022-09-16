@@ -6,7 +6,7 @@ import { parseStringPromise } from 'xml2js';
 
 import { PlexObject } from './base/plexObject.js';
 import { BASE_HEADERS, TIMEOUT } from './config.js';
-import { Connection, Device, PlexUser, ResourcesResponse, UserResponse } from './myplex.types.js';
+import { Connection, Device, PlexUser, PlexUserServerShare, ResourcesResponse, UserResponse } from './myplex.types.js';
 import { PlexServer } from './server.js';
 import { MediaContainer } from './util.js';
 import { Section } from './library.js';
@@ -309,6 +309,9 @@ username = user.username if isinstance(user, MyPlexUser) else user
 
     if (url.includes('xml') || isXml) {
       const res = await promise;
+
+      console.log(res.body);
+
       const xml = await parseStringPromise(res.body);
       return xml;
     }
@@ -609,7 +612,7 @@ export class MyPlexUser extends PlexObject {
     this.thumb = data.$.thumb;
     this.title = data.$.title;
     this.username = data.$.username;
-    
+    this.servers = data.Server.map(s => new MyPlexServerShare(this.server, s, null, this));
   }
 
   async history(maxResults: number = 9999999, minDate: Date = null): Promise<HistoryMetadatum[]> {
@@ -635,18 +638,16 @@ export class MyPlexServerShare extends PlexObject {
   owned!: boolean;
   pending!: boolean;
 
-  protected override _loadData(data: any): void {
-    this.key = data.key;
-    this.id = data.id;
-    this.accountId = data.accountId;
-    this.serverId = data.serverId;
-    this.machineIdentifier = data.machineIdentifier;
-    this.name = data.name;
-    this.lastSeenAt = data.lastSeenAt;
-    this.numLibraries = data.numLibraries;
-    this.allLibraries = data.allLibraries;
-    this.owned = data.owned;
-    this.pending = data.pending;
+  protected override _loadData(data: PlexUserServerShare): void {
+    this.id = data.$.id;
+    this.serverId = data.$.serverId;
+    this.machineIdentifier = data.$.machineIdentifier;
+    this.name = data.$.name;
+    this.lastSeenAt = data.$.lastSeenAt;
+    this.numLibraries = data.$.numLibraries;
+    this.allLibraries = data.$.allLibraries;
+    this.owned = data.$.owned;
+    this.pending = data.$.pending;
   }
 
   async section(name: string): Promise<Section> {

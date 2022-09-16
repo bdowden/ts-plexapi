@@ -154,6 +154,20 @@ export interface PlexUser {
     thumb: string;
     title: string;
     username: string;
-    
+  },
+  Server: PlexUserServerShare[];
+}
+
+export interface PlexUserServerShare {
+  $: {
+    id: number;
+    serverId: number;
+    machineIdentifier: string;
+    name: string;
+    lastSeenAt: Date;
+    numLibraries: number;
+    allLibraries: boolean;
+    owned: boolean;
+    pending: boolean;
   }
 }
